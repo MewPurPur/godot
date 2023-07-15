@@ -504,11 +504,11 @@ void ScriptTextEditor::_update_warnings() {
 				String source_path = base == connection.signal.get_object() ? base_path : base_path + "/" + base->get_path_to(Object::cast_to<Node>(connection.signal.get_object()));
 				String target_path = base == connection.callable.get_object() ? base_path : base_path + "/" + base->get_path_to(Object::cast_to<Node>(connection.callable.get_object()));
 
+				warnings_panel->push_context(); // Enter cell context.
 				warnings_panel->push_cell();
 				warnings_panel->push_color(warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
 				warnings_panel->add_text(vformat(TTR("Missing connected method '%s' for signal '%s' from node '%s' to node '%s'."), connection.callable.get_method(), connection.signal.get_name(), source_path, target_path));
-				warnings_panel->pop(); // Color.
-				warnings_panel->pop(); // Cell.
+				warnings_panel->pop_context(); // Exit cell context.
 			}
 			warnings_panel->pop(); // Table.
 
@@ -528,23 +528,21 @@ void ScriptTextEditor::_update_warnings() {
 		Dictionary ignore_meta;
 		ignore_meta["line"] = w.start_line;
 		ignore_meta["code"] = w.string_code.to_lower();
+		warnings_panel->push_context(); // Enter cell context.
 		warnings_panel->push_cell();
 		warnings_panel->push_meta(ignore_meta);
 		warnings_panel->push_color(
 				warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor")).lerp(warnings_panel->get_theme_color(SNAME("mono_color"), SNAME("Editor")), 0.5f));
 		warnings_panel->add_text(TTR("[Ignore]"));
-		warnings_panel->pop(); // Color.
-		warnings_panel->pop(); // Meta ignore.
-		warnings_panel->pop(); // Cell.
+		warnings_panel->pop_context(); // Exit cell context.
 
+		warnings_panel->push_context(); // Enter cell context.
 		warnings_panel->push_cell();
 		warnings_panel->push_meta(w.start_line - 1);
 		warnings_panel->push_color(warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
 		warnings_panel->add_text(TTR("Line") + " " + itos(w.start_line));
 		warnings_panel->add_text(" (" + w.string_code + "):");
-		warnings_panel->pop(); // Color.
-		warnings_panel->pop(); // Meta goto.
-		warnings_panel->pop(); // Cell.
+		warnings_panel->pop_context(); // Exit cell context.
 
 		warnings_panel->push_cell();
 		warnings_panel->add_text(w.message);
@@ -560,13 +558,12 @@ void ScriptTextEditor::_update_errors() {
 	errors_panel->clear();
 	errors_panel->push_table(2);
 	for (const ScriptLanguage::ScriptError &err : errors) {
+		errors_panel->push_context(); // Enter cell context.
 		errors_panel->push_cell();
 		errors_panel->push_meta(err.line - 1);
 		errors_panel->push_color(warnings_panel->get_theme_color(SNAME("error_color"), SNAME("Editor")));
 		errors_panel->add_text(TTR("Line") + " " + itos(err.line) + ":");
-		errors_panel->pop(); // Color.
-		errors_panel->pop(); // Meta goto.
-		errors_panel->pop(); // Cell.
+		errors_panel->pop_context(); // Exit cell context.
 
 		errors_panel->push_cell();
 		errors_panel->add_text(err.message);

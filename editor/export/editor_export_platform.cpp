@@ -124,13 +124,13 @@ bool EditorExportPlatform::fill_log_messages(RichTextLabel *p_log, Error p_err) 
 			}
 			p_log->pop();
 
+			p_log->push_context(); // Enter cell context.
 			p_log->push_cell();
 			p_log->push_color(color);
 			p_log->add_text(vformat("[%s]: %s", msg.category, msg.text));
-			p_log->pop();
-			p_log->pop();
+			p_log->pop_context(); // Exit cell context.
 		}
-		p_log->pop();
+		p_log->pop(); // Table
 		p_log->add_newline();
 	}
 	p_log->add_newline();

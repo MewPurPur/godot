@@ -569,6 +569,7 @@ void VersionControlEditorPlugin::_display_diff(int p_idx) {
 		String commit_author = meta_data[SNAME("commit_author")];
 		String commit_date_string = meta_data[SNAME("commit_date_string")];
 
+		diff->push_context(); // Formatting context
 		diff->push_font(EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("doc_bold"), SNAME("EditorFonts")));
 		diff->push_color(EditorNode::get_singleton()->get_gui_base()->get_theme_color(SNAME("accent_color"), SNAME("Editor")));
 		diff->add_text(TTR("Commit:") + " " + commit_id);
@@ -582,18 +583,17 @@ void VersionControlEditorPlugin::_display_diff(int p_idx) {
 			diff->add_newline();
 		}
 		diff->add_newline();
-		diff->pop();
-		diff->pop();
+		diff->pop_context();
 	}
 
 	for (int i = 0; i < diff_content.size(); i++) {
 		EditorVCSInterface::DiffFile diff_file = diff_content[i];
 
+		diff->push_context(); // Formatting context
 		diff->push_font(EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("doc_bold"), SNAME("EditorFonts")));
 		diff->push_color(EditorNode::get_singleton()->get_gui_base()->get_theme_color(SNAME("accent_color"), SNAME("Editor")));
 		diff->add_text(TTR("File:") + " " + diff_file.new_file);
-		diff->pop();
-		diff->pop();
+		diff->pop_context();
 
 		diff->push_font(EditorNode::get_singleton()->get_gui_base()->get_theme_font(SNAME("status_source"), SNAME("EditorFonts")));
 		for (int j = 0; j < diff_file.diff_hunks.size(); j++) {
@@ -683,23 +683,23 @@ void VersionControlEditorPlugin::_display_diff_split_view(List<EditorVCSInterfac
 		static const Color white = EditorNode::get_singleton()->get_gui_base()->get_theme_color(SNAME("font_color"), SNAME("Label")) * Color(1, 1, 1, 0.6);
 
 		if (diff_line.old_line_no >= 0) {
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? red : white);
 			diff->add_text(String::num_int64(diff_line.old_line_no));
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? red : white);
 			diff->add_text(has_change ? "-|" : " |");
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? red : white);
 			diff->add_text(diff_line.old_text);
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 
 		} else {
 			diff->push_cell();
@@ -713,23 +713,23 @@ void VersionControlEditorPlugin::_display_diff_split_view(List<EditorVCSInterfac
 		}
 
 		if (diff_line.new_line_no >= 0) {
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? green : white);
 			diff->add_text(String::num_int64(diff_line.new_line_no));
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? green : white);
 			diff->add_text(has_change ? "+|" : " |");
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 
+			diff->push_context(); // Enter cell context.
 			diff->push_cell();
 			diff->push_color(has_change ? green : white);
 			diff->add_text(diff_line.new_text);
-			diff->pop();
-			diff->pop();
+			diff->pop_context(); // Exit cell context.
 		} else {
 			diff->push_cell();
 			diff->pop();
@@ -768,33 +768,31 @@ void VersionControlEditorPlugin::_display_diff_unified_view(List<EditorVCSInterf
 			color *= Color(1, 1, 1, 0.6);
 		}
 
+		diff->push_context(); // Enter cell context.
 		diff->push_cell();
 		diff->push_color(color);
 		diff->push_indent(1);
 		diff->add_text(diff_line.old_line_no >= 0 ? String::num_int64(diff_line.old_line_no) : "");
-		diff->pop();
-		diff->pop();
-		diff->pop();
+		diff->pop_context(); // Exit cell context.
 
+		diff->push_context(); // Enter cell context.
 		diff->push_cell();
 		diff->push_color(color);
 		diff->push_indent(1);
 		diff->add_text(diff_line.new_line_no >= 0 ? String::num_int64(diff_line.new_line_no) : "");
-		diff->pop();
-		diff->pop();
-		diff->pop();
+		diff->pop_context(); // Exit cell context.
 
+		diff->push_context(); // Enter cell context.
 		diff->push_cell();
 		diff->push_color(color);
 		diff->add_text(diff_line.status != "" ? diff_line.status + "|" : " |");
-		diff->pop();
-		diff->pop();
+		diff->pop_context(); // Exit cell context.
 
+		diff->push_context(); // Enter cell context.
 		diff->push_cell();
 		diff->push_color(color);
 		diff->add_text(line);
-		diff->pop();
-		diff->pop();
+		diff->pop_context(); // Exit cell context.
 	}
 
 	diff->pop();

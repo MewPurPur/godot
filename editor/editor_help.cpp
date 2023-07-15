@@ -328,11 +328,11 @@ void EditorHelp::_class_desc_resized(bool p_force_update_theme) {
 
 void EditorHelp::_add_type(const String &p_type, const String &p_enum, bool p_is_bitfield) {
 	if (p_type.is_empty() || p_type == "void") {
+		class_desc->push_context();
 		class_desc->push_color(Color(theme_cache.type_color, 0.5));
 		class_desc->push_hint(TTR("No return value."));
 		class_desc->add_text("void");
-		class_desc->pop();
-		class_desc->pop();
+		class_desc->pop_context();
 		return;
 	}
 
@@ -458,17 +458,13 @@ void EditorHelp::_add_method(const DocData::MethodDoc &p_method, bool p_overview
 		class_desc->add_text(" ");
 	}
 
+	class_desc->push_context();
 	if (p_overview && !p_method.description.strip_edges().is_empty()) {
 		class_desc->push_meta("@method " + p_method.name);
 	}
-
 	class_desc->push_color(theme_cache.headline_color);
 	_add_text(p_method.name);
-	class_desc->pop();
-
-	if (p_overview && !p_method.description.strip_edges().is_empty()) {
-		class_desc->pop(); // meta
-	}
+	class_desc->pop_context();
 
 	class_desc->push_color(theme_cache.symbol_color);
 	class_desc->add_text("(");
@@ -611,6 +607,7 @@ Error EditorHelp::_goto_desc(const String &p_class) {
 void EditorHelp::_update_method_list(const Vector<DocData::MethodDoc> p_methods) {
 	class_desc->add_newline();
 
+	class_desc->push_context();
 	_push_code_font();
 	class_desc->push_indent(1);
 	class_desc->push_table(2);
@@ -660,9 +657,7 @@ void EditorHelp::_update_method_list(const Vector<DocData::MethodDoc> p_methods)
 		any_previous = !m.is_empty();
 	}
 
-	class_desc->pop(); // table
-	class_desc->pop();
-	_pop_code_font();
+	class_desc->pop_context();
 
 	class_desc->add_newline();
 	class_desc->add_newline();
@@ -692,6 +687,7 @@ void EditorHelp::_update_method_descriptions(const DocData::ClassDoc p_classdoc,
 			class_desc->add_newline();
 			class_desc->add_newline();
 
+			class_desc->push_context();
 			class_desc->push_color(theme_cache.text_color);
 			_push_normal_font();
 			class_desc->push_indent(1);
@@ -734,9 +730,7 @@ void EditorHelp::_update_method_descriptions(const DocData::ClassDoc p_classdoc,
 				class_desc->pop();
 			}
 
-			class_desc->pop();
-			_pop_normal_font();
-			class_desc->pop();
+			class_desc->pop_context();
 
 			class_desc->add_newline();
 			class_desc->add_newline();
@@ -768,7 +762,7 @@ void EditorHelp::_update_doc() {
 	class_desc->add_text(" ");
 	class_desc->push_color(theme_cache.headline_color);
 	_add_text(edited_class);
-	class_desc->pop(); // color
+	class_desc->pop();
 	_pop_title_font();
 
 	if (cd.is_deprecated) {
@@ -789,6 +783,7 @@ void EditorHelp::_update_doc() {
 
 	// Ascendents
 	if (!cd.inherits.is_empty()) {
+		class_desc->push_context();
 		class_desc->push_color(theme_cache.title_color);
 		_push_normal_font();
 		class_desc->add_text(TTR("Inherits:") + " ");
@@ -807,8 +802,7 @@ void EditorHelp::_update_doc() {
 			}
 		}
 
-		_pop_normal_font();
-		class_desc->pop();
+		class_desc->pop_context();
 		class_desc->add_newline();
 	}
 
@@ -897,13 +891,13 @@ void EditorHelp::_update_doc() {
 
 		class_desc->add_newline();
 		class_desc->add_newline();
+
+		class_desc->push_context();
 		class_desc->push_color(theme_cache.text_color);
 		_push_normal_font();
 		class_desc->push_indent(1);
 		_add_text(DTR(cd.description));
-		class_desc->pop();
-		_pop_normal_font();
-		class_desc->pop();
+		class_desc->pop_context();
 
 		class_desc->add_newline();
 		class_desc->add_newline();
@@ -929,13 +923,12 @@ void EditorHelp::_update_doc() {
 	if (classes_with_csharp_differences.has(cd.name)) {
 		const String &csharp_differences_url = vformat("%s/tutorials/scripting/c_sharp/c_sharp_differences.html", VERSION_DOCS_URL);
 
+		class_desc->push_context();
 		class_desc->push_color(theme_cache.text_color);
 		_push_normal_font();
 		class_desc->push_indent(1);
 		_add_text("[b]" + TTR("Note:") + "[/b] " + vformat(TTR("There are notable differences when using this API with C#. See [url=%s]C# API differences to GDScript[/url] for more information."), csharp_differences_url));
-		class_desc->pop();
-		_pop_normal_font();
-		class_desc->pop();
+		class_desc->pop_context();
 
 		class_desc->add_newline();
 		class_desc->add_newline();
@@ -950,6 +943,7 @@ void EditorHelp::_update_doc() {
 
 		class_desc->add_newline();
 
+		class_desc->push_context(); // Enter indented code font context.
 		class_desc->push_indent(1);
 		_push_code_font();
 
@@ -967,8 +961,7 @@ void EditorHelp::_update_doc() {
 			class_desc->add_newline();
 		}
 
-		_pop_code_font();
-		class_desc->pop();
+		class_desc->pop_context(); // Exit indented code font context.
 
 		class_desc->add_newline();
 		class_desc->add_newline();
@@ -998,6 +991,7 @@ void EditorHelp::_update_doc() {
 
 		class_desc->add_newline();
 
+		class_desc->push_context(); // Enter table context.
 		_push_code_font();
 		class_desc->push_indent(1);
 		class_desc->push_table(4);
@@ -1011,13 +1005,12 @@ void EditorHelp::_update_doc() {
 			property_line[cd.properties[i].name] = class_desc->get_paragraph_count() - 2; //gets overridden if description
 
 			// Property type.
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			class_desc->push_paragraph(HORIZONTAL_ALIGNMENT_RIGHT, Control::TEXT_DIRECTION_AUTO, "");
 			_push_code_font();
 			_add_type(cd.properties[i].type, cd.properties[i].enumeration, cd.properties[i].is_bitfield);
-			_pop_code_font();
-			class_desc->pop();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 
 			bool describe = false;
 
@@ -1039,25 +1032,18 @@ void EditorHelp::_update_doc() {
 			}
 
 			// Property name.
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			_push_code_font();
 			class_desc->push_color(theme_cache.headline_color);
-
 			if (describe) {
 				class_desc->push_meta("@member " + cd.properties[i].name);
 			}
-
 			_add_text(cd.properties[i].name);
-
-			if (describe) {
-				class_desc->pop();
-			}
-
-			class_desc->pop();
-			_pop_code_font();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 
 			// Property value.
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			_push_code_font();
 
@@ -1090,10 +1076,10 @@ void EditorHelp::_update_doc() {
 				EXPERIMENTAL_DOC_TAG;
 			}
 
-			_pop_code_font();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 
 			// Property setters and getters.
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			_push_code_font();
 
@@ -1123,13 +1109,10 @@ void EditorHelp::_update_doc() {
 				class_desc->pop(); // color
 			}
 
-			_pop_code_font();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 		}
 
-		class_desc->pop(); // table
-		class_desc->pop();
-		_pop_code_font();
+		class_desc->pop_context(); // Enter table context.
 
 		class_desc->add_newline();
 		class_desc->add_newline();
@@ -1249,9 +1232,11 @@ void EditorHelp::_update_doc() {
 				class_desc->push_color(theme_cache.symbol_color);
 				class_desc->add_text(" [" + TTR("default:") + " ");
 				class_desc->pop();
+
 				class_desc->push_color(theme_cache.value_color);
 				_add_text(_fix_constant(cd.theme_properties[i].default_value));
 				class_desc->pop();
+
 				class_desc->push_color(theme_cache.symbol_color);
 				class_desc->add_text("]");
 				class_desc->pop();
@@ -1261,13 +1246,12 @@ void EditorHelp::_update_doc() {
 
 			// Theme item description.
 			if (!cd.theme_properties[i].description.strip_edges().is_empty()) {
+				class_desc->push_context();
 				class_desc->push_color(theme_cache.comment_color);
 				_push_normal_font();
 				class_desc->push_indent(1);
 				_add_text(DTR(cd.theme_properties[i].description));
-				class_desc->pop(); // indent
-				_pop_normal_font();
-				class_desc->pop(); // color
+				class_desc->pop_context();
 			}
 
 			class_desc->add_newline();
@@ -1338,13 +1322,9 @@ void EditorHelp::_update_doc() {
 			_pop_code_font();
 
 			if (!cd.signals[i].description.strip_edges().is_empty()) {
-				class_desc->push_color(theme_cache.comment_color);
-				_push_normal_font();
-				class_desc->push_indent(1);
+				class_desc->push_context();
 				_add_text(DTR(cd.signals[i].description));
-				class_desc->pop(); // indent
-				_pop_normal_font();
-				class_desc->pop(); // color
+				class_desc->pop_context();
 			}
 
 			class_desc->add_newline();
@@ -1417,13 +1397,12 @@ void EditorHelp::_update_doc() {
 
 				// Enum description.
 				if (e != "@unnamed_enums" && cd.enums.has(e) && !cd.enums[e].strip_edges().is_empty()) {
+					class_desc->push_context();
 					class_desc->push_color(theme_cache.text_color);
 					_push_normal_font();
 					class_desc->push_indent(1);
 					_add_text(cd.enums[e]);
-					class_desc->pop();
-					_pop_normal_font();
-					class_desc->pop();
+					class_desc->pop_context();
 
 					class_desc->add_newline();
 					class_desc->add_newline();
@@ -1445,15 +1424,19 @@ void EditorHelp::_update_doc() {
 
 					_push_code_font();
 					_add_bulletpoint();
+
 					class_desc->push_color(theme_cache.headline_color);
 					_add_text(enum_list[i].name);
 					class_desc->pop();
+
 					class_desc->push_color(theme_cache.symbol_color);
 					class_desc->add_text(" = ");
 					class_desc->pop();
+
 					class_desc->push_color(theme_cache.value_color);
 					_add_text(_fix_constant(enum_list[i].value));
 					class_desc->pop();
+
 					_pop_code_font();
 
 					if (enum_list[i].is_deprecated) {
@@ -1467,11 +1450,11 @@ void EditorHelp::_update_doc() {
 					class_desc->add_newline();
 
 					if (!enum_list[i].description.strip_edges().is_empty()) {
+						class_desc->push_context();
 						class_desc->push_color(theme_cache.comment_color);
 						_push_normal_font();
 						_add_text(DTR(enum_list[i].description));
-						_pop_normal_font();
-						class_desc->pop();
+						class_desc->pop_context();
 						if (DTR(enum_list[i].description).find("\n") > 0) {
 							class_desc->add_newline();
 						}
@@ -1523,9 +1506,11 @@ void EditorHelp::_update_doc() {
 				class_desc->push_color(theme_cache.headline_color);
 				_add_text(constants[i].name);
 				class_desc->pop();
+
 				class_desc->push_color(theme_cache.symbol_color);
 				class_desc->add_text(" = ");
 				class_desc->pop();
+
 				class_desc->push_color(theme_cache.value_color);
 				_add_text(_fix_constant(constants[i].value));
 				class_desc->pop();
@@ -1610,14 +1595,14 @@ void EditorHelp::_update_doc() {
 				}
 
 				if (cd.annotations[i].qualifiers.contains("vararg")) {
-					class_desc->push_color(theme_cache.text_color);
+					class_desc->push_context(); // Color context
 					if (cd.annotations[i].arguments.size()) {
+						class_desc->push_color(theme_cache.text_color);
 						class_desc->add_text(", ");
 					}
 					class_desc->push_color(theme_cache.symbol_color);
 					class_desc->add_text("...");
-					class_desc->pop();
-					class_desc->pop();
+					class_desc->pop_context();
 				}
 
 				class_desc->push_color(theme_cache.symbol_color);
@@ -1635,14 +1620,14 @@ void EditorHelp::_update_doc() {
 			_pop_code_font();
 
 			if (!cd.annotations[i].description.strip_edges().is_empty()) {
+				class_desc->push_context();
 				class_desc->push_color(theme_cache.comment_color);
 				_push_normal_font();
 				class_desc->push_indent(1);
 				_add_text(DTR(cd.annotations[i].description));
-				class_desc->pop(); // indent
-				_pop_normal_font();
-				class_desc->pop(); // color
+				class_desc->pop_context();
 			} else {
+				class_desc->push_context(); // Indent context
 				class_desc->push_indent(1);
 				class_desc->add_image(get_theme_icon(SNAME("Error"), SNAME("EditorIcons")));
 				class_desc->add_text(" ");
@@ -1652,8 +1637,7 @@ void EditorHelp::_update_doc() {
 				} else {
 					class_desc->append_text(TTR("There is currently no description for this annotation. Please help us by [color=$color][url=$url]contributing one[/url][/color]!").replace("$url", CONTRIBUTE_URL).replace("$color", link_color_text));
 				}
-				class_desc->pop();
-				class_desc->pop(); // indent
+				class_desc->pop_context();
 			}
 			class_desc->add_newline();
 			class_desc->add_newline();
@@ -1687,17 +1671,19 @@ void EditorHelp::_update_doc() {
 			class_desc->push_table(2);
 			class_desc->set_table_column_expand(1, true);
 
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			_push_code_font();
 			_add_bulletpoint();
 
 			_add_type(cd.properties[i].type, cd.properties[i].enumeration, cd.properties[i].is_bitfield);
 			class_desc->add_text(" ");
-			_pop_code_font();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 
+			class_desc->push_context(); // Enter cell context.
 			class_desc->push_cell();
 			_push_code_font();
+
 			class_desc->push_color(theme_cache.headline_color);
 			_add_text(cd.properties[i].name);
 			class_desc->pop(); // color
@@ -1749,8 +1735,7 @@ void EditorHelp::_update_doc() {
 				class_desc->pop(); // color
 			}
 
-			_pop_code_font();
-			class_desc->pop(); // cell
+			class_desc->pop_context(); // Exit cell context.
 
 			// Script doc doesn't have setter, getter.
 			if (!cd.is_script_doc) {
@@ -1761,12 +1746,13 @@ void EditorHelp::_update_doc() {
 
 				if (!cd.properties[i].setter.is_empty()) {
 					class_desc->push_cell();
-					class_desc->pop(); // cell
+					class_desc->pop(); // Cell
 
+					class_desc->push_context(); // Enter cell context.
 					class_desc->push_cell();
 					_push_code_font();
-					class_desc->push_color(theme_cache.text_color);
 
+					class_desc->push_color(theme_cache.text_color);
 					if (method_map[cd.properties[i].setter].arguments.size() > 1) {
 						// Setters with additional arguments are exposed in the method list, so we link them here for quick access.
 						class_desc->push_meta("@method " + cd.properties[i].setter);
@@ -1775,25 +1761,26 @@ void EditorHelp::_update_doc() {
 					} else {
 						class_desc->add_text(cd.properties[i].setter + TTR("(value)"));
 					}
+					class_desc->pop(); // Color
 
-					class_desc->pop(); // color
 					class_desc->push_color(theme_cache.comment_color);
 					class_desc->add_text(" setter");
-					class_desc->pop(); // color
-					_pop_code_font();
-					class_desc->pop(); // cell
+					class_desc->pop(); // Color
+
+					class_desc->pop_context(); // Exit cell context.
 
 					method_line[cd.properties[i].setter] = property_line[cd.properties[i].name];
 				}
 
 				if (!cd.properties[i].getter.is_empty()) {
 					class_desc->push_cell();
-					class_desc->pop(); // cell
+					class_desc->pop();
 
+					class_desc->push_context(); // Enter cell context.
 					class_desc->push_cell();
 					_push_code_font();
-					class_desc->push_color(theme_cache.text_color);
 
+					class_desc->push_color(theme_cache.text_color);
 					if (method_map[cd.properties[i].getter].arguments.size() > 0) {
 						// Getters with additional arguments are exposed in the method list, so we link them here for quick access.
 						class_desc->push_meta("@method " + cd.properties[i].getter);
@@ -1802,13 +1789,13 @@ void EditorHelp::_update_doc() {
 					} else {
 						class_desc->add_text(cd.properties[i].getter + "()");
 					}
+					class_desc->pop(); // Color
 
-					class_desc->pop(); // color
 					class_desc->push_color(theme_cache.comment_color);
 					class_desc->add_text(" getter");
-					class_desc->pop(); // color
-					_pop_code_font();
-					class_desc->pop(); // cell
+					class_desc->pop(); // Color
+
+					class_desc->pop_context(); // Exit cell context.
 
 					method_line[cd.properties[i].getter] = property_line[cd.properties[i].name];
 				}
@@ -1819,6 +1806,7 @@ void EditorHelp::_update_doc() {
 			class_desc->add_newline();
 			class_desc->add_newline();
 
+			class_desc->push_context(); // Enter context.
 			class_desc->push_color(theme_cache.text_color);
 			_push_normal_font();
 			class_desc->push_indent(1);
@@ -1835,9 +1823,7 @@ void EditorHelp::_update_doc() {
 				}
 				class_desc->pop();
 			}
-			class_desc->pop();
-			_pop_normal_font();
-			class_desc->pop();
+			class_desc->pop_context(); // Exit context.
 
 			class_desc->add_newline();
 			class_desc->add_newline();
@@ -2117,6 +2103,7 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 
 			// Use monospace font to make clickable references
 			// easier to distinguish from inline code and other text.
+			p_rt->push_context();
 			p_rt->push_font(doc_code_font);
 			p_rt->push_font_size(doc_code_font_size);
 
@@ -2131,11 +2118,7 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 			p_rt->push_color(target_color);
 			p_rt->push_meta("@" + link_tag + " " + link_target);
 			p_rt->add_text(link_target + (link_tag == "method" ? "()" : ""));
-			p_rt->pop();
-			p_rt->pop();
-
-			p_rt->pop(); // font size
-			p_rt->pop(); // font
+			p_rt->pop_context();
 			pos = brk_end + 1;
 
 		} else if (tag.begins_with("param ")) {
@@ -2143,17 +2126,13 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 			const String param_name = tag.substr(tag_end + 1, tag.length()).lstrip(" ");
 
 			// Use monospace font with translucent background color to make code easier to distinguish from other text.
+			p_rt->push_context();
 			p_rt->push_font(doc_code_font);
 			p_rt->push_font_size(doc_code_font_size);
-
 			p_rt->push_bgcolor(param_bg_color);
 			p_rt->push_color(code_color);
 			p_rt->add_text(param_name);
-			p_rt->pop();
-			p_rt->pop();
-
-			p_rt->pop(); // font size
-			p_rt->pop(); // font
+			p_rt->pop_context();
 			pos = brk_end + 1;
 
 		} else if (tag == p_class) {
@@ -2166,17 +2145,13 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, Control
 
 		} else if (doc->class_list.has(tag)) {
 			// Use a monospace font for class reference tags such as [Node2D] or [SceneTree].
-
+			p_rt->push_context();
 			p_rt->push_font(doc_code_font);
 			p_rt->push_font_size(doc_code_font_size);
 			p_rt->push_color(type_color);
 			p_rt->push_meta("#" + tag);
 			p_rt->add_text(tag);
-
-			p_rt->pop();
-			p_rt->pop();
-			p_rt->pop(); // Font size
-			p_rt->pop(); // Font
+			p_rt->pop_context();
 
 			pos = brk_end + 1;
 
