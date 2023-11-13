@@ -104,8 +104,10 @@ Error ImageLoaderSVG::create_image_from_utf8_buffer(Ref<Image> p_image, const ui
 	picture->size(width, height);
 
 	std::unique_ptr<tvg::SwCanvas> sw_canvas = tvg::SwCanvas::gen();
+
+	uint32_t row_stride_bytes = sizeof(uint32_t) * width;
 	// Note: memalloc here, be sure to memfree before any return.
-	uint32_t *buffer = (uint32_t *)memalloc(sizeof(uint32_t) * width * height);
+	uint32_t *buffer = (uint32_t *)memalloc(row_stride_bytes * height);
 
 	tvg::Result res = sw_canvas->target(buffer, width, width, height, tvg::SwCanvas::ARGB8888S);
 	if (res != tvg::Result::Success) {
@@ -132,12 +134,13 @@ Error ImageLoaderSVG::create_image_from_utf8_buffer(Ref<Image> p_image, const ui
 	}
 
 	Vector<uint8_t> image;
-	image.resize(width * height * sizeof(uint32_t));
+	image.resize(row_stride_bytes * height);
 
 	for (uint32_t y = 0; y < height; y++) {
+		const size_t row_offset = row_stride_bytes * y;
 		for (uint32_t x = 0; x < width; x++) {
 			uint32_t n = buffer[y * width + x];
-			const size_t offset = sizeof(uint32_t) * width * y + sizeof(uint32_t) * x;
+			const size_t offset = row_offset + sizeof(uint32_t) * x;
 			image.write[offset + 0] = (n >> 16) & 0xff;
 			image.write[offset + 1] = (n >> 8) & 0xff;
 			image.write[offset + 2] = n & 0xff;
