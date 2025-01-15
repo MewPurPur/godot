@@ -188,6 +188,7 @@ public:
 	void remove_highlight();
 
 private:
+	MarginContainer *thumbnail_container = nullptr;
 	TextureRect *thumbnail = nullptr;
 	HighlightedLabel *name = nullptr;
 };

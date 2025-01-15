@@ -220,14 +220,15 @@ QuickOpenResultContainer::QuickOpenResultContainer() {
 
 			list = memnew(VBoxContainer);
 			list->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+			list->add_theme_constant_override("separation", 0);
 			list->hide();
 			scroll_container->add_child(list);
 
 			grid = memnew(HFlowContainer);
 			grid->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 			grid->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-			grid->add_theme_constant_override("v_separation", 18);
-			grid->add_theme_constant_override("h_separation", 4);
+			grid->add_theme_constant_override("v_separation", 0);
+			grid->add_theme_constant_override("h_separation", 0);
 			grid->hide();
 			scroll_container->add_child(grid);
 
@@ -899,7 +900,7 @@ void QuickOpenResultItem::_notification(int p_what) {
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
 			selected_stylebox = get_theme_stylebox("selected", "Tree");
-			hovering_stylebox = get_theme_stylebox(SceneStringName(hover), "Tree");
+			hovering_stylebox = get_theme_stylebox("hovered", "Tree");
 			highlighted_font_color = get_theme_color("font_focus_color", EditorStringName(Editor));
 		} break;
 		case NOTIFICATION_DRAW: {
@@ -1034,11 +1035,15 @@ QuickOpenResultGridItem::QuickOpenResultGridItem() {
 	set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	add_theme_constant_override("separation", -2 * EDSCALE);
 
+	thumbnail_container = memnew(MarginContainer);
+	thumbnail_container->add_theme_constant_override("margin_top", 6 * EDSCALE);
+	add_child(thumbnail_container);
+
 	thumbnail = memnew(TextureRect);
 	thumbnail->set_h_size_flags(Control::SIZE_SHRINK_CENTER);
 	thumbnail->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
 	thumbnail->set_custom_minimum_size(Size2i(120 * EDSCALE, 64 * EDSCALE));
-	add_child(thumbnail);
+	thumbnail_container->add_child(thumbnail);
 
 	name = memnew(HighlightedLabel);
 	name->set_h_size_flags(Control::SIZE_EXPAND_FILL);
