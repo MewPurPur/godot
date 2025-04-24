@@ -152,153 +152,118 @@ void TextParagraph::_shape_lines() const {
 		lines_dirty = true;
 	}
 
+	if (!lines_dirty) {
+		return;
+	}
+
 	for (const RID &line_rid : lines_rid) {
-		if (!TS->shaped_text_is_ready(line_rid)) {
-			lines_dirty = true;
-			break;
+		TS->free_rid(line_rid);
+	}
+	lines_rid.clear();
+
+	if (!tab_stops.is_empty()) {
+		TS->shaped_text_tab_align(rid, tab_stops);
+	}
+
+	float h_offset = 0.f;
+	float v_offset = 0.f;
+	int start = 0;
+	dropcap_lines = 0;
+
+	if (TS->shaped_text_get_orientation(dropcap_rid) == TextServer::ORIENTATION_HORIZONTAL) {
+		h_offset = TS->shaped_text_get_size(dropcap_rid).x + dropcap_margins.size.x + dropcap_margins.position.x;
+		v_offset = TS->shaped_text_get_size(dropcap_rid).y + dropcap_margins.size.y + dropcap_margins.position.y;
+	} else {
+		h_offset = TS->shaped_text_get_size(dropcap_rid).y + dropcap_margins.size.y + dropcap_margins.position.y;
+		v_offset = TS->shaped_text_get_size(dropcap_rid).x + dropcap_margins.size.x + dropcap_margins.position.x;
+	}
+
+	Size2i range = TS->shaped_text_get_range(rid);
+	if (h_offset > 0) {
+		// Dropcap, flow around.
+		PackedInt32Array line_breaks = TS->shaped_text_get_line_breaks(rid, width - h_offset, 0, brk_flags);
+		for (int i = 0; i < line_breaks.size(); i = i + 2) {
+			RID line = TS->shaped_text_substr(rid, line_breaks[i], line_breaks[i + 1] - line_breaks[i]);
+			float h = (TS->shaped_text_get_orientation(line) == TextServer::ORIENTATION_HORIZONTAL) ? TS->shaped_text_get_size(line).y : TS->shaped_text_get_size(line).x;
+			h += line_spacing;
+			if (!tab_stops.is_empty()) {
+				TS->shaped_text_tab_align(line, tab_stops);
+			}
+			start = (i < line_breaks.size() - 2) ? line_breaks[i + 2] : range.y;
+			lines_rid.push_back(line);
+			if (v_offset < h) {
+				break;
+			}
+			dropcap_lines++;
+			v_offset -= h;
+		}
+	}
+	// Use fixed for the rest of lines.
+	if (start == 0 || start < range.y) {
+		PackedInt32Array line_breaks = TS->shaped_text_get_line_breaks(rid, width, start, brk_flags);
+		for (int i = 0; i < line_breaks.size(); i = i + 2) {
+			RID line = TS->shaped_text_substr(rid, line_breaks[i], line_breaks[i + 1] - line_breaks[i]);
+			if (!tab_stops.is_empty()) {
+				TS->shaped_text_tab_align(line, tab_stops);
+			}
+			lines_rid.push_back(line);
 		}
 	}
 
-	if (lines_dirty) {
-		for (const RID &line_rid : lines_rid) {
-			TS->free_rid(line_rid);
-		}
-		lines_rid.clear();
-
-		if (!tab_stops.is_empty()) {
-			TS->shaped_text_tab_align(rid, tab_stops);
-		}
-
-		float h_offset = 0.f;
-		float v_offset = 0.f;
-		int start = 0;
-		dropcap_lines = 0;
-
-		if (TS->shaped_text_get_orientation(dropcap_rid) == TextServer::ORIENTATION_HORIZONTAL) {
-			h_offset = TS->shaped_text_get_size(dropcap_rid).x + dropcap_margins.size.x + dropcap_margins.position.x;
-			v_offset = TS->shaped_text_get_size(dropcap_rid).y + dropcap_margins.size.y + dropcap_margins.position.y;
-		} else {
-			h_offset = TS->shaped_text_get_size(dropcap_rid).y + dropcap_margins.size.y + dropcap_margins.position.y;
-			v_offset = TS->shaped_text_get_size(dropcap_rid).x + dropcap_margins.size.x + dropcap_margins.position.x;
-		}
-
-		Size2i range = TS->shaped_text_get_range(rid);
-		if (h_offset > 0) {
-			// Dropcap, flow around.
-			PackedInt32Array line_breaks = TS->shaped_text_get_line_breaks(rid, width - h_offset, 0, brk_flags);
-			for (int i = 0; i < line_breaks.size(); i = i + 2) {
-				RID line = TS->shaped_text_substr(rid, line_breaks[i], line_breaks[i + 1] - line_breaks[i]);
-				float h = (TS->shaped_text_get_orientation(line) == TextServer::ORIENTATION_HORIZONTAL) ? TS->shaped_text_get_size(line).y : TS->shaped_text_get_size(line).x;
-				h += line_spacing;
-				if (!tab_stops.is_empty()) {
-					TS->shaped_text_tab_align(line, tab_stops);
-				}
-				start = (i < line_breaks.size() - 2) ? line_breaks[i + 2] : range.y;
-				lines_rid.push_back(line);
-				if (v_offset < h) {
-					break;
-				}
-				dropcap_lines++;
-				v_offset -= h;
-			}
-		}
-		// Use fixed for the rest of lines.
-		if (start == 0 || start < range.y) {
-			PackedInt32Array line_breaks = TS->shaped_text_get_line_breaks(rid, width, start, brk_flags);
-			for (int i = 0; i < line_breaks.size(); i = i + 2) {
-				RID line = TS->shaped_text_substr(rid, line_breaks[i], line_breaks[i + 1] - line_breaks[i]);
-				if (!tab_stops.is_empty()) {
-					TS->shaped_text_tab_align(line, tab_stops);
-				}
-				lines_rid.push_back(line);
-			}
-		}
-
-		BitField<TextServer::TextOverrunFlag> overrun_flags = TextServer::OVERRUN_NO_TRIM;
-		if (overrun_behavior != TextServer::OVERRUN_NO_TRIMMING) {
-			switch (overrun_behavior) {
-				case TextServer::OVERRUN_TRIM_WORD_ELLIPSIS_FORCE: {
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
-					overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
-					overrun_flags.set_flag(TextServer::OVERRUN_ENFORCE_ELLIPSIS);
-				} break;
-				case TextServer::OVERRUN_TRIM_ELLIPSIS_FORCE: {
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
-					overrun_flags.set_flag(TextServer::OVERRUN_ENFORCE_ELLIPSIS);
-				} break;
-				case TextServer::OVERRUN_TRIM_WORD_ELLIPSIS:
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
-					overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
-					break;
-				case TextServer::OVERRUN_TRIM_ELLIPSIS:
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
-					break;
-				case TextServer::OVERRUN_TRIM_WORD:
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
-					break;
-				case TextServer::OVERRUN_TRIM_CHAR:
-					overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
-					break;
-				case TextServer::OVERRUN_NO_TRIMMING:
-					break;
-			}
-		}
-
-		bool autowrap_enabled = brk_flags.has_flag(TextServer::BREAK_WORD_BOUND) || brk_flags.has_flag(TextServer::BREAK_GRAPHEME_BOUND);
-
-		// Fill after min_size calculation.
-		if (autowrap_enabled) {
-			int visible_lines = (max_lines_visible >= 0) ? MIN(max_lines_visible, (int)lines_rid.size()) : (int)lines_rid.size();
-			bool lines_hidden = visible_lines > 0 && visible_lines < (int)lines_rid.size();
-			if (lines_hidden) {
+	BitField<TextServer::TextOverrunFlag> overrun_flags = TextServer::OVERRUN_NO_TRIM;
+	if (overrun_behavior != TextServer::OVERRUN_NO_TRIMMING) {
+		switch (overrun_behavior) {
+			case TextServer::OVERRUN_TRIM_WORD_ELLIPSIS_FORCE: {
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
+				overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
 				overrun_flags.set_flag(TextServer::OVERRUN_ENFORCE_ELLIPSIS);
-			}
-			if (alignment == HORIZONTAL_ALIGNMENT_FILL) {
-				int jst_to_line = visible_lines;
-				if (lines_rid.size() == 1 && jst_flags.has_flag(TextServer::JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE)) {
-					jst_to_line = lines_rid.size();
-				} else {
-					if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE)) {
-						jst_to_line = visible_lines - 1;
-					}
-					if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS)) {
-						for (int i = visible_lines - 1; i >= 0; i--) {
-							if (TS->shaped_text_has_visible_chars(lines_rid[i])) {
-								jst_to_line = i;
-								break;
-							}
-						}
-					}
-				}
-				for (int i = 0; i < (int)lines_rid.size(); i++) {
-					float line_w = (i <= dropcap_lines) ? (width - h_offset) : width;
-					if (i < jst_to_line) {
-						TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags);
-					} else if (i == (visible_lines - 1)) {
-						TS->shaped_text_set_custom_ellipsis(lines_rid[visible_lines - 1], (el_char.length() > 0) ? el_char[0] : 0x2026);
-						TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], line_w, overrun_flags);
-					}
-				}
-			} else if (lines_hidden) {
-				TS->shaped_text_set_custom_ellipsis(lines_rid[visible_lines - 1], (el_char.length() > 0) ? el_char[0] : 0x2026);
-				TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], (visible_lines - 1 <= dropcap_lines) ? (width - h_offset) : width, overrun_flags);
-			}
-		} else {
-			// Autowrap disabled.
-			int jst_to_line = lines_rid.size();
+			} break;
+			case TextServer::OVERRUN_TRIM_ELLIPSIS_FORCE: {
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
+				overrun_flags.set_flag(TextServer::OVERRUN_ENFORCE_ELLIPSIS);
+			} break;
+			case TextServer::OVERRUN_TRIM_WORD_ELLIPSIS:
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
+				overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
+				break;
+			case TextServer::OVERRUN_TRIM_ELLIPSIS:
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				overrun_flags.set_flag(TextServer::OVERRUN_ADD_ELLIPSIS);
+				break;
+			case TextServer::OVERRUN_TRIM_WORD:
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM_WORD_ONLY);
+				break;
+			case TextServer::OVERRUN_TRIM_CHAR:
+				overrun_flags.set_flag(TextServer::OVERRUN_TRIM);
+				break;
+			case TextServer::OVERRUN_NO_TRIMMING:
+				break;
+		}
+	}
+
+	bool autowrap_enabled = brk_flags.has_flag(TextServer::BREAK_WORD_BOUND) || brk_flags.has_flag(TextServer::BREAK_GRAPHEME_BOUND);
+
+	// Fill after min_size calculation.
+	if (autowrap_enabled) {
+		int visible_lines = (max_lines_visible >= 0) ? MIN(max_lines_visible, (int)lines_rid.size()) : (int)lines_rid.size();
+		bool lines_hidden = visible_lines > 0 && visible_lines < (int)lines_rid.size();
+		if (lines_hidden) {
+			overrun_flags.set_flag(TextServer::OVERRUN_ENFORCE_ELLIPSIS);
+		}
+		if (alignment == HORIZONTAL_ALIGNMENT_FILL) {
+			int jst_to_line = visible_lines;
 			if (lines_rid.size() == 1 && jst_flags.has_flag(TextServer::JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE)) {
 				jst_to_line = lines_rid.size();
 			} else {
 				if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE)) {
-					jst_to_line = lines_rid.size() - 1;
+					jst_to_line = visible_lines - 1;
 				}
 				if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS)) {
-					for (int i = lines_rid.size() - 1; i >= 0; i--) {
+					for (int i = visible_lines - 1; i >= 0; i--) {
 						if (TS->shaped_text_has_visible_chars(lines_rid[i])) {
 							jst_to_line = i;
 							break;
@@ -308,20 +273,50 @@ void TextParagraph::_shape_lines() const {
 			}
 			for (int i = 0; i < (int)lines_rid.size(); i++) {
 				float line_w = (i <= dropcap_lines) ? (width - h_offset) : width;
-				if (i < jst_to_line && alignment == HORIZONTAL_ALIGNMENT_FILL) {
+				if (i < jst_to_line) {
 					TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags);
-					overrun_flags.set_flag(TextServer::OVERRUN_JUSTIFICATION_AWARE);
-					TS->shaped_text_set_custom_ellipsis(lines_rid[i], (el_char.length() > 0) ? el_char[0] : 0x2026);
-					TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
-					TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags | TextServer::JUSTIFICATION_CONSTRAIN_ELLIPSIS);
-				} else {
-					TS->shaped_text_set_custom_ellipsis(lines_rid[i], (el_char.length() > 0) ? el_char[0] : 0x2026);
-					TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
+				} else if (i == (visible_lines - 1)) {
+					TS->shaped_text_set_custom_ellipsis(lines_rid[visible_lines - 1], (el_char.length() > 0) ? el_char[0] : 0x2026);
+					TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], line_w, overrun_flags);
+				}
+			}
+		} else if (lines_hidden) {
+			TS->shaped_text_set_custom_ellipsis(lines_rid[visible_lines - 1], (el_char.length() > 0) ? el_char[0] : 0x2026);
+			TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], (visible_lines - 1 <= dropcap_lines) ? (width - h_offset) : width, overrun_flags);
+		}
+	} else {
+		// Autowrap disabled.
+		int jst_to_line = lines_rid.size();
+		if (lines_rid.size() == 1 && jst_flags.has_flag(TextServer::JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE)) {
+			jst_to_line = lines_rid.size();
+		} else {
+			if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE)) {
+				jst_to_line = lines_rid.size() - 1;
+			}
+			if (jst_flags.has_flag(TextServer::JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS)) {
+				for (int i = lines_rid.size() - 1; i >= 0; i--) {
+					if (TS->shaped_text_has_visible_chars(lines_rid[i])) {
+						jst_to_line = i;
+						break;
+					}
 				}
 			}
 		}
-		lines_dirty = false;
+		for (int i = 0; i < (int)lines_rid.size(); i++) {
+			float line_w = (i <= dropcap_lines) ? (width - h_offset) : width;
+			if (i < jst_to_line && alignment == HORIZONTAL_ALIGNMENT_FILL) {
+				TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags);
+				overrun_flags.set_flag(TextServer::OVERRUN_JUSTIFICATION_AWARE);
+				TS->shaped_text_set_custom_ellipsis(lines_rid[i], (el_char.length() > 0) ? el_char[0] : 0x2026);
+				TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
+				TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags | TextServer::JUSTIFICATION_CONSTRAIN_ELLIPSIS);
+			} else {
+				TS->shaped_text_set_custom_ellipsis(lines_rid[i], (el_char.length() > 0) ? el_char[0] : 0x2026);
+				TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
+			}
+		}
 	}
+	lines_dirty = false;
 }
 
 RID TextParagraph::get_rid() const {
